@@ -49,6 +49,21 @@ class ChatRepo:
         await self._conn.commit()
         return await self.is_enabled(chat_id)
 
+    async def is_silent(self, chat_id: int) -> bool:
+        cur = await self._conn.execute(
+            "SELECT silent FROM chats WHERE chat_id = ?", (chat_id,)
+        )
+        row = await cur.fetchone()
+        return bool(row and row["silent"])
+
+    async def toggle_silent(self, chat_id: int) -> bool:
+        """Переключает беззвучный режим чата, возвращает новое состояние."""
+        await self._conn.execute(
+            "UPDATE chats SET silent = 1 - silent WHERE chat_id = ?", (chat_id,)
+        )
+        await self._conn.commit()
+        return await self.is_silent(chat_id)
+
     async def active_chat_ids(self) -> list[int]:
         cur = await self._conn.execute("SELECT chat_id FROM chats WHERE enabled = 1")
         return [row["chat_id"] for row in await cur.fetchall()]
@@ -56,6 +71,10 @@ class ChatRepo:
     async def all_chat_ids(self) -> list[int]:
         cur = await self._conn.execute("SELECT chat_id FROM chats")
         return [row["chat_id"] for row in await cur.fetchall()]
+
+    async def silent_chat_ids(self) -> set[int]:
+        cur = await self._conn.execute("SELECT chat_id FROM chats WHERE silent = 1")
+        return {row["chat_id"] for row in await cur.fetchall()}
 
 
 class SubscriptionRepo:

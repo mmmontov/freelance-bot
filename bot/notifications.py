@@ -59,12 +59,13 @@ def _fmt_price(value: float | None) -> str:
 
 
 async def send_order(bot: Bot, chat_id: int, order: Order,
-                     exchange_title: str) -> None:
+                     exchange_title: str, silent: bool = False) -> None:
     try:
         await bot.send_message(
             chat_id,
             format_order(order, exchange_title),
             disable_web_page_preview=True,
+            disable_notification=silent,
             reply_markup=order_kb(),
         )
     except Exception:

@@ -5,7 +5,8 @@ import aiosqlite
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS chats (
     chat_id INTEGER PRIMARY KEY,
-    enabled INTEGER NOT NULL DEFAULT 1
+    enabled INTEGER NOT NULL DEFAULT 1,
+    silent  INTEGER NOT NULL DEFAULT 0
 );
 
 CREATE TABLE IF NOT EXISTS subscriptions (
@@ -35,8 +36,19 @@ class Database:
         self.conn = await aiosqlite.connect(self._path)
         self.conn.row_factory = aiosqlite.Row
         await self.conn.executescript(SCHEMA)
+        await self._migrate()
         await self.conn.commit()
         return self.conn
+
+    async def _migrate(self) -> None:
+        """CREATE TABLE IF NOT EXISTS не добавляет колонки в уже существующую
+        таблицу — досыпаем их отдельно для баз, созданных до этой колонки."""
+        try:
+            await self.conn.execute(
+                "ALTER TABLE chats ADD COLUMN silent INTEGER NOT NULL DEFAULT 0"
+            )
+        except aiosqlite.OperationalError:
+            pass
 
     async def close(self) -> None:
         if self.conn is not None:

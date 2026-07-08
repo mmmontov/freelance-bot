@@ -25,6 +25,12 @@ async def on_menu(callback: CallbackQuery, callback_data: MenuCb,
             "Уведомления включены" if enabled else "Уведомления выключены"
         )
         action = "main"
+    elif action == "t_silent":
+        silent = await chat_repo.toggle_silent(chat_id)
+        await callback.answer(
+            "Уведомления без звука" if silent else "Уведомления со звуком"
+        )
+        action = "main"
     elif action == "t_rubric":
         await sub_repo.toggle(chat_id, callback_data.exchange, callback_data.rubric)
         await callback.answer()
@@ -39,7 +45,8 @@ async def on_menu(callback: CallbackQuery, callback_data: MenuCb,
 
     if action == "main":
         notify = await chat_repo.is_enabled(chat_id)
-        markup = main_menu(notify, list(EXCHANGES.values()))
+        silent = await chat_repo.is_silent(chat_id)
+        markup = main_menu(notify, silent, list(EXCHANGES.values()))
     else:
         exchange = EXCHANGES[callback_data.exchange]
         states = await sub_repo.get_states(chat_id, exchange.name)

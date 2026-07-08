@@ -41,9 +41,9 @@ Requests to the exchange are deliberately throttled and randomized (`REQUEST_PAU
 
 Orders are deduplicated per-exchange in `seen_orders` (not per-chat), and delivery within a poll cycle is deduped per `(chat_id, order_id)` since a chat can subscribe to overlapping rubric/subrubric combos.
 
-**Storage** (`storage/`): `database.py` owns schema + connection (SQLite via aiosqlite); `repository.py` has three repos — `ChatRepo` (registration, global notify toggle), `SubscriptionRepo` (per-chat rubric/subrubric enable state), `SeenOrdersRepo` (dedup + periodic cleanup of old entries).
+**Storage** (`storage/`): `database.py` owns schema + connection (SQLite via aiosqlite) plus a `_migrate()` step run on every connect — `CREATE TABLE IF NOT EXISTS` doesn't add columns to a table that already exists, so new `chats`/`subscriptions` columns need an `ALTER TABLE ... ADD COLUMN` guarded by `except aiosqlite.OperationalError: pass` added there. `repository.py` has three repos — `ChatRepo` (registration, global notify toggle, per-chat silent/no-sound toggle), `SubscriptionRepo` (per-chat rubric/subrubric enable state), `SeenOrdersRepo` (dedup + periodic cleanup of old entries).
 
-**Bot layer** (`bot/`): `handlers/commands.py` handles `/start`, `/menu`, `/status`; `handlers/menu.py` handles the inline-menu callback tree (toggle notifications / rubric / subrubric, navigate between menu levels) — all driven by the single `MenuCb` callback-data schema in `keyboards.py`. `notifications.py` formats and sends order messages (HTML parse mode): unescapes HTML entities from kwork's description text, strips/collapses whitespace, truncates long descriptions at a word boundary.
+**Bot layer** (`bot/`): `handlers/commands.py` handles `/start`, `/menu`, `/status`; `handlers/menu.py` handles the inline-menu callback tree (toggle notifications / sound / rubric / subrubric, navigate between menu levels) — all driven by the single `MenuCb` callback-data schema in `keyboards.py`. `notifications.py` formats and sends order messages (HTML parse mode): unescapes HTML entities from kwork's description text, strips/collapses whitespace, truncates long descriptions at a word boundary, and sends with `disable_notification` set per-chat from the silent toggle (watcher passes this in via `ChatRepo.silent_chat_ids()`).
 
 ## Notes
 

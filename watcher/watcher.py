@@ -48,11 +48,12 @@ class Watcher:
         if not chat_ids:
             return
         active_ids = set(await self._chat_repo.active_chat_ids())
+        silent_ids = await self._chat_repo.silent_chat_ids()
         for exchange in self._exchanges.values():
-            await self._poll_exchange(exchange, chat_ids, active_ids)
+            await self._poll_exchange(exchange, chat_ids, active_ids, silent_ids)
 
-    async def _poll_exchange(self, exchange: BaseExchange,
-                             chat_ids: list[int], active_ids: set[int]) -> None:
+    async def _poll_exchange(self, exchange: BaseExchange, chat_ids: list[int],
+                             active_ids: set[int], silent_ids: set[int]) -> None:
         # уникальные комбинации (рубрика, включённые подрубрики) → чаты
         combos: dict[tuple[str, frozenset[str]], list[int]] = defaultdict(list)
         for chat_id in chat_ids:
@@ -96,7 +97,8 @@ class Watcher:
                         if key in delivered:
                             continue
                         delivered.add(key)
-                        await send_order(self._bot, chat_id, order, exchange.title)
+                        await send_order(self._bot, chat_id, order, exchange.title,
+                                         silent=chat_id in silent_ids)
 
             await asyncio.sleep(random.uniform(*REQUEST_PAUSE))
 

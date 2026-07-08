@@ -30,9 +30,10 @@ async def on_added_to_chat(event: ChatMemberUpdated, chat_repo: ChatRepo) -> Non
 async def cmd_menu(message: Message, chat_repo: ChatRepo) -> None:
     await chat_repo.register(message.chat.id, EXCHANGES.values())
     notify = await chat_repo.is_enabled(message.chat.id)
+    silent = await chat_repo.is_silent(message.chat.id)
     await message.answer(
         "⚙️ <b>Настройки уведомлений</b>",
-        reply_markup=main_menu(notify, list(EXCHANGES.values())),
+        reply_markup=main_menu(notify, silent, list(EXCHANGES.values())),
     )
 
 
@@ -41,7 +42,11 @@ async def cmd_status(message: Message, chat_repo: ChatRepo,
                      sub_repo: SubscriptionRepo) -> None:
     await chat_repo.register(message.chat.id, EXCHANGES.values())
     notify = await chat_repo.is_enabled(message.chat.id)
-    lines = [f"🔔 Уведомления: {'ВКЛ' if notify else 'ВЫКЛ'}"]
+    silent = await chat_repo.is_silent(message.chat.id)
+    lines = [
+        f"🔔 Уведомления: {'ВКЛ' if notify else 'ВЫКЛ'}",
+        f"🔊 Звук: {'ВЫКЛ' if silent else 'ВКЛ'}",
+    ]
     for exchange in EXCHANGES.values():
         enabled = await sub_repo.enabled_rubrics(message.chat.id, exchange.name)
         lines.append(f"\n<b>{exchange.title}</b>")

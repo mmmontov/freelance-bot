@@ -6,7 +6,7 @@ from exchanges.base import BaseExchange
 
 
 class MenuCb(CallbackData, prefix="m"):
-    action: str          # main | exch | rubric | t_notify | t_rubric | t_attr | close
+    action: str          # main | exch | rubric | t_notify | t_silent | t_rubric | t_attr | close
     exchange: str = ""
     rubric: str = ""
     attr: str = ""
@@ -24,11 +24,16 @@ def order_kb() -> InlineKeyboardMarkup:
     ]])
 
 
-def main_menu(notify_enabled: bool, exchanges: list[BaseExchange]) -> InlineKeyboardMarkup:
+def main_menu(notify_enabled: bool, silent: bool,
+             exchanges: list[BaseExchange]) -> InlineKeyboardMarkup:
     kb = InlineKeyboardBuilder()
     kb.row(InlineKeyboardButton(
         text=f"🔔 Уведомления: {'ВКЛ' if notify_enabled else 'ВЫКЛ'}",
         callback_data=MenuCb(action="t_notify").pack(),
+    ))
+    kb.row(InlineKeyboardButton(
+        text=f"{'🔇 Без звука' if silent else '🔊 Со звуком'}",
+        callback_data=MenuCb(action="t_silent").pack(),
     ))
     for exchange in exchanges:
         kb.row(InlineKeyboardButton(
