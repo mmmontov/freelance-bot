@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python3 -m venv venv)",
+      "Bash(./venv/bin/pip install *)",
+      "Bash(./venv/bin/python -c \"import aiogram, aiosqlite, dotenv; print\\('aiogram', aiogram.__version__\\)\")"
+    ]
+  }
+}

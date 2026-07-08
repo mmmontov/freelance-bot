@@ -1,0 +1,15 @@
+[Unit]
+Description=Freelance orders watcher bot (kwork -> telegram)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=misha
+WorkingDirectory=/opt/freelance_bot
+ExecStart=/opt/freelance_bot/venv/bin/python main.py
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

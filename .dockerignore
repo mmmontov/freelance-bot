@@ -1,0 +1,9 @@
+venv/
+__pycache__/
+*.pyc
+bot.db
+data/
+.env
+.git/
+freelance-bot.service
+README.md

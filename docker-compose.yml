@@ -1,0 +1,10 @@
+services:
+  freelance-bot:
+    build: .
+    container_name: freelance-bot
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      DB_PATH: data/bot.db
+    volumes:
+      - ./data:/app/data
