@@ -6,7 +6,7 @@ from exchanges.base import BaseExchange
 
 
 class MenuCb(CallbackData, prefix="m"):
-    action: str          # main | exch | rubric | t_notify | t_silent | t_rubric | t_attr | draft | close
+    action: str          # main | exch | rubric | t_notify | t_silent | t_rubric | t_attr | draft | redraft | close
     exchange: str = ""
     rubric: str = ""
     attr: str = ""
@@ -27,6 +27,17 @@ def order_kb(exchange: str, order_id: str) -> InlineKeyboardMarkup:
         ),
         InlineKeyboardButton(text="🗑 Удалить",
                              callback_data=MenuCb(action="del_order").pack()),
+    ]])
+
+
+def draft_kb(exchange: str, order_id: str) -> InlineKeyboardMarkup:
+    """Клавиатура под сообщением с черновиком отклика."""
+    return InlineKeyboardMarkup(inline_keyboard=[[
+        InlineKeyboardButton(
+            text="🔄 Перегенерировать",
+            callback_data=MenuCb(action="redraft", exchange=exchange,
+                                 order_id=order_id).pack(),
+        ),
     ]])
 
 
