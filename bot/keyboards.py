@@ -38,6 +38,8 @@ def draft_kb(exchange: str, order_id: str) -> InlineKeyboardMarkup:
             callback_data=MenuCb(action="redraft", exchange=exchange,
                                  order_id=order_id).pack(),
         ),
+        InlineKeyboardButton(text="🗑 Удалить",
+                             callback_data=MenuCb(action="del_order").pack()),
     ]])
 
 
