@@ -47,6 +47,8 @@ Orders are deduplicated per-exchange in `seen_orders` (not per-chat), and delive
 
 **Draft responses** (`bot/draftgen.py`): each order notification has a "✍️ Черновик отклика" button. Tapping it calls the free Groq API (Llama 3.3 70B, OpenAI-compatible `groq` SDK) to draft a short bid response from the order's title/description, sent back as a separate reply message — actually submitting the response on kwork is always manual. This is deliberate: kwork's Terms of Service bans automated/bot responses and reserves the right to ban accounts for it (same reasoning behind the request throttling in the watcher), so only the low-stakes, read-only side (monitoring + drafting) is automated. Draft generation is on-demand (button tap), not automatic per order, to stay within Groq's free-tier limits.
 
+Style is steered by `data/style_profile.md` (optional, read fresh on every call — no rebuild needed to update it): the user's tech stack plus real order→response example pairs, appended to the system prompt so the model matches their tone/paragraph structure instead of writing generic AI boilerplate. Lives only in the `data/` volume (gitignored, same as the SQLite DB) since it's personal writing samples, not code — if this file is missing the bot falls back to the generic `SYSTEM_PROMPT`.
+
 ## Notes
 
 - `main.py` wires everything together: loads config, opens the DB, builds repos, registers `SEED_CHAT_ID` if set, starts the aiogram dispatcher and the watcher as a background task.
