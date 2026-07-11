@@ -13,6 +13,7 @@ class Config:
     poll_interval: int
     db_path: Path
     seed_chat_id: int | None
+    groq_api_key: str
 
 
 def load_config() -> Config:
@@ -29,4 +30,5 @@ def load_config() -> Config:
         poll_interval=int(os.getenv("POLL_INTERVAL", "180")),
         db_path=BASE_DIR / os.getenv("DB_PATH", "bot.db"),
         seed_chat_id=int(seed_chat) if seed_chat else None,
+        groq_api_key=os.getenv("GROQ_API_KEY", "").strip(),
     )

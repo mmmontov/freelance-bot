@@ -66,7 +66,7 @@ async def send_order(bot: Bot, chat_id: int, order: Order,
             format_order(order, exchange_title),
             disable_web_page_preview=True,
             disable_notification=silent,
-            reply_markup=order_kb(),
+            reply_markup=order_kb(order.exchange, order.order_id),
         )
     except Exception:
         logger.exception("Не удалось отправить заказ %s в чат %s",

@@ -1,22 +1,35 @@
-from aiogram import Router
-from aiogram.types import CallbackQuery
+import html
+import logging
 
+from aiogram import Router
+from aiogram.enums import ChatAction
+from aiogram.types import CallbackQuery
+from groq import AsyncGroq
+
+from bot.draftgen import generate_draft
 from bot.keyboards import MenuCb, exchange_menu, main_menu, rubric_menu
 from exchanges.registry import EXCHANGES
-from storage.repository import ChatRepo, SubscriptionRepo
+from storage.repository import ChatRepo, OrderCacheRepo, SubscriptionRepo
+
+logger = logging.getLogger(__name__)
 
 router = Router()
 
 
 @router.callback_query(MenuCb.filter())
 async def on_menu(callback: CallbackQuery, callback_data: MenuCb,
-                  chat_repo: ChatRepo, sub_repo: SubscriptionRepo) -> None:
+                  chat_repo: ChatRepo, sub_repo: SubscriptionRepo,
+                  order_cache: OrderCacheRepo, groq_client: AsyncGroq | None) -> None:
     chat_id = callback.message.chat.id
     action = callback_data.action
 
     if action in ("close", "del_order"):
         await callback.message.delete()
         await callback.answer()
+        return
+
+    if action == "draft":
+        await _send_draft(callback, callback_data, order_cache, groq_client)
         return
 
     if action == "t_notify":
@@ -57,3 +70,35 @@ async def on_menu(callback: CallbackQuery, callback_data: MenuCb,
 
     if callback.message.reply_markup != markup:
         await callback.message.edit_reply_markup(reply_markup=markup)
+
+
+async def _send_draft(callback: CallbackQuery, callback_data: MenuCb,
+                      order_cache: OrderCacheRepo, groq_client: AsyncGroq | None) -> None:
+    if groq_client is None:
+        await callback.answer(
+            "Черновики не настроены (нет GROQ_API_KEY)", show_alert=True
+        )
+        return
+
+    order = await order_cache.get(callback_data.exchange, callback_data.order_id)
+    if order is None:
+        await callback.answer(
+            "Черновик недоступен — данные о заказе устарели", show_alert=True
+        )
+        return
+
+    await callback.answer()
+    await callback.bot.send_chat_action(callback.message.chat.id, ChatAction.TYPING)
+    try:
+        draft = await generate_draft(groq_client, order)
+    except Exception:
+        logger.exception("Не удалось сгенерировать черновик для заказа %s",
+                         order.order_id)
+        await callback.message.answer(
+            "Не удалось сгенерировать черновик, попробуй ещё раз позже."
+        )
+        return
+
+    await callback.message.answer(
+        html.escape(draft), reply_to_message_id=callback.message.message_id
+    )

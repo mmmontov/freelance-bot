@@ -6,19 +6,25 @@ from exchanges.base import BaseExchange
 
 
 class MenuCb(CallbackData, prefix="m"):
-    action: str          # main | exch | rubric | t_notify | t_silent | t_rubric | t_attr | close
+    action: str          # main | exch | rubric | t_notify | t_silent | t_rubric | t_attr | draft | close
     exchange: str = ""
     rubric: str = ""
     attr: str = ""
+    order_id: str = ""
 
 
 def _mark(enabled: bool) -> str:
     return "✅" if enabled else "🔕"
 
 
-def order_kb() -> InlineKeyboardMarkup:
+def order_kb(exchange: str, order_id: str) -> InlineKeyboardMarkup:
     """Клавиатура под уведомлением о заказе."""
     return InlineKeyboardMarkup(inline_keyboard=[[
+        InlineKeyboardButton(
+            text="✍️ Черновик отклика",
+            callback_data=MenuCb(action="draft", exchange=exchange,
+                                 order_id=order_id).pack(),
+        ),
         InlineKeyboardButton(text="🗑 Удалить",
                              callback_data=MenuCb(action="del_order").pack()),
     ]])

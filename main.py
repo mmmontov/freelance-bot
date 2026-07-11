@@ -4,12 +4,13 @@ import logging
 from aiogram import Bot, Dispatcher
 from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
+from groq import AsyncGroq
 
 from bot.handlers import commands, menu
 from config import load_config
 from exchanges.registry import EXCHANGES
 from storage.database import Database
-from storage.repository import ChatRepo, SeenOrdersRepo, SubscriptionRepo
+from storage.repository import ChatRepo, OrderCacheRepo, SeenOrdersRepo, SubscriptionRepo
 from watcher.watcher import Watcher
 
 logging.basicConfig(
@@ -27,6 +28,11 @@ async def main() -> None:
     chat_repo = ChatRepo(conn)
     sub_repo = SubscriptionRepo(conn)
     seen_repo = SeenOrdersRepo(conn)
+    order_cache = OrderCacheRepo(conn)
+
+    groq_client = AsyncGroq(api_key=config.groq_api_key) if config.groq_api_key else None
+    if groq_client is None:
+        logger.warning("GROQ_API_KEY не задан — черновики откликов отключены")
 
     if config.seed_chat_id is not None:
         await chat_repo.register(config.seed_chat_id, EXCHANGES.values())
@@ -35,10 +41,11 @@ async def main() -> None:
         token=config.bot_token,
         default=DefaultBotProperties(parse_mode=ParseMode.HTML),
     )
-    dp = Dispatcher(chat_repo=chat_repo, sub_repo=sub_repo, seen_repo=seen_repo)
+    dp = Dispatcher(chat_repo=chat_repo, sub_repo=sub_repo, seen_repo=seen_repo,
+                    order_cache=order_cache, groq_client=groq_client)
     dp.include_routers(commands.router, menu.router)
 
-    watcher = Watcher(bot, EXCHANGES, chat_repo, sub_repo, seen_repo,
+    watcher = Watcher(bot, EXCHANGES, chat_repo, sub_repo, seen_repo, order_cache,
                       config.poll_interval)
     watcher_task = asyncio.create_task(watcher.run())
 

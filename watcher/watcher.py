@@ -7,7 +7,7 @@ from aiogram import Bot
 
 from bot.notifications import send_order
 from exchanges.base import BaseExchange
-from storage.repository import ChatRepo, SeenOrdersRepo, SubscriptionRepo
+from storage.repository import ChatRepo, OrderCacheRepo, SeenOrdersRepo, SubscriptionRepo
 
 logger = logging.getLogger(__name__)
 
@@ -19,12 +19,14 @@ CLEANUP_EVERY = 200          # циклов между чистками seen_ord
 class Watcher:
     def __init__(self, bot: Bot, exchanges: dict[str, BaseExchange],
                  chat_repo: ChatRepo, sub_repo: SubscriptionRepo,
-                 seen_repo: SeenOrdersRepo, interval: int) -> None:
+                 seen_repo: SeenOrdersRepo, order_cache: OrderCacheRepo,
+                 interval: int) -> None:
         self._bot = bot
         self._exchanges = exchanges
         self._chat_repo = chat_repo
         self._sub_repo = sub_repo
         self._seen_repo = seen_repo
+        self._order_cache = order_cache
         self._interval = interval
 
     async def run(self) -> None:
@@ -37,6 +39,7 @@ class Watcher:
             cycle += 1
             if cycle % CLEANUP_EVERY == 0:
                 await self._seen_repo.cleanup()
+                await self._order_cache.cleanup()
             jitter = self._interval * INTERVAL_JITTER
             await asyncio.sleep(self._interval + random.uniform(-jitter, jitter))
 
@@ -90,6 +93,7 @@ class Watcher:
                 for order in reversed(orders):
                     if order.order_id not in fresh:
                         continue
+                    await self._order_cache.cache(order)
                     for chat_id in combo_chats:
                         if chat_id not in active_ids:
                             continue

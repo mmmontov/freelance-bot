@@ -2,7 +2,7 @@ from collections.abc import Iterable
 
 import aiosqlite
 
-from exchanges.base import BaseExchange
+from exchanges.base import BaseExchange, Order
 
 
 class ChatRepo:
@@ -149,6 +149,54 @@ class SeenOrdersRepo:
     async def cleanup(self, days: int = 30) -> None:
         await self._conn.execute(
             "DELETE FROM seen_orders WHERE seen_at < datetime('now', ?)",
+            (f"-{days} days",),
+        )
+        await self._conn.commit()
+
+
+class OrderCacheRepo:
+    """Хранит title/description доставленных заказов для генерации черновика
+    отклика по кнопке — к моменту тапа сам объект Order из памяти watcher'а
+    уже недоступен."""
+
+    def __init__(self, conn: aiosqlite.Connection) -> None:
+        self._conn = conn
+
+    async def cache(self, order: Order) -> None:
+        await self._conn.execute(
+            "INSERT OR IGNORE INTO order_cache "
+            "(exchange, order_id, title, description, rubric_title, url) "
+            "VALUES (?, ?, ?, ?, ?, ?)",
+            (order.exchange, order.order_id, order.title, order.description,
+             order.rubric_title, order.url),
+        )
+        await self._conn.commit()
+
+    async def get(self, exchange: str, order_id: str) -> Order | None:
+        cur = await self._conn.execute(
+            "SELECT * FROM order_cache WHERE exchange = ? AND order_id = ?",
+            (exchange, order_id),
+        )
+        row = await cur.fetchone()
+        if row is None:
+            return None
+        return Order(
+            exchange=row["exchange"],
+            order_id=row["order_id"],
+            title=row["title"],
+            description=row["description"],
+            price=None,
+            price_max=None,
+            url=row["url"],
+            rubric_id="",
+            rubric_title=row["rubric_title"],
+            time_left="",
+            offers_count=0,
+        )
+
+    async def cleanup(self, days: int = 30) -> None:
+        await self._conn.execute(
+            "DELETE FROM order_cache WHERE cached_at < datetime('now', ?)",
             (f"-{days} days",),
         )
         await self._conn.commit()

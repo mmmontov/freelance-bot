@@ -24,6 +24,17 @@ CREATE TABLE IF NOT EXISTS seen_orders (
     seen_at  TEXT NOT NULL DEFAULT (datetime('now')),
     PRIMARY KEY (exchange, order_id)
 );
+
+CREATE TABLE IF NOT EXISTS order_cache (
+    exchange     TEXT NOT NULL,
+    order_id     TEXT NOT NULL,
+    title        TEXT NOT NULL,
+    description  TEXT NOT NULL,
+    rubric_title TEXT NOT NULL,
+    url          TEXT NOT NULL,
+    cached_at    TEXT NOT NULL DEFAULT (datetime('now')),
+    PRIMARY KEY (exchange, order_id)
+);
 """
 
 
