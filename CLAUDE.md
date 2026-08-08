@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-Telegram bot (aiogram 3) that polls freelance exchanges for new orders and pushes notifications to chats. Currently only kwork.ru is wired up. No test suite exists.
+Telegram bot (aiogram 3) that polls freelance exchanges for new orders and pushes notifications to chats. Currently only kwork.ru is wired up.
 
 ## Running
 
@@ -17,6 +17,26 @@ Manual parser check (hits kwork.ru live, prints parsed orders instead of sending
 ```bash
 venv/bin/python -m exchanges.kwork.provider
 ```
+
+## Tests
+
+```bash
+venv/bin/pip install -r requirements-dev.txt   # pytest, pytest-asyncio, ruff
+venv/bin/pytest
+venv/bin/ruff check .
+```
+
+pytest/ruff config lives in `pyproject.toml` (`asyncio_mode = "auto"`, so `async def test_...` needs no marker; `pythonpath = ["."]` so tests import `bot.*`/`watcher.*` without installing the project).
+
+**Hard rule: no test may touch the network.** kwork has anti-bot protection and Groq has free-tier limits — a suite that hits either would go red for reasons unrelated to the code. `tests/conftest.py` enforces this with an autouse fixture that makes `aiohttp.ClientSession` and `groq.AsyncGroq` raise. Instead: monkeypatch `KworkExchange._get` to return `tests/fixtures/kwork_projects.html`, and pass a fake client to `generate_draft`.
+
+Shared fixtures in `tests/conftest.py`: in-memory SQLite `conn` plus one fixture per repo, `FakeExchange` (configurable rubric tree, records which rubric/attrs were requested, can be told to raise via `fail_on`), `FakeBot` (collects sent messages; `broken_bot` raises on every send), `make_order` factory.
+
+`tests/test_watcher.py::TestNotifyToggleDoesNotAffectPolling` guards the polling invariant described below — it's a regression suite for a bug that actually shipped, so don't delete those tests when refactoring the watcher.
+
+The kwork fixture is a trimmed synthetic snapshot of the projects page. Note the caveat in its header comment: never write the state-variable name followed by `=` in that file's comments, or `STATE_RE` matches the comment instead of the data.
+
+Local `venv` is Python 3.10 while the Docker image is 3.12 — CI should pin 3.12 to match production.
 
 Deployment is Docker-based, not the systemd unit in the repo root (`freelance-bot.service` is legacy/unused):
 ```bash

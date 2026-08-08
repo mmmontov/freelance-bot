@@ -1,0 +1,32 @@
+<!doctype html>
+<!--
+  Урезанный слепок страницы https://kwork.ru/projects — только то, что нужно
+  парсеру: встроенный в HTML объект состояния.
+
+  ВАЖНО: не упоминай в этом комментарии имя переменной состояния вместе со
+  знаком равенства — STATE_RE в provider.py найдёт первое совпадение в файле,
+  и парсер начнёт разбирать текст комментария вместо данных.
+
+  Как обновить, если kwork поменяет разметку и тесты покраснеют:
+    1. curl -A "Mozilla/5.0" 'https://kwork.ru/projects?c=41' -o /tmp/kwork.html
+    2. найти в нём присваивание window-переменной состояния и вытащить объект
+    3. оставить в pagination.data 2-3 заказа, вырезать всё лишнее и
+       заменить реальные тексты на синтетические (в репозитории не должно
+       лежать чужих персональных данных из объявлений)
+
+  Специально сохранены особенности живых данных:
+    - priceLimit приходит строкой, а не числом
+    - в description встречаются HTML-сущности (&nbsp;, &amp;) и \r\n
+    - у части заказов possiblePriceLimit равен priceLimit или отсутствует
+    - есть заказ с пустым описанием и без timeLeft
+-->
+<html lang="ru">
+<head><title>Заказы — Kwork</title></head>
+<body>
+<div id="app"></div>
+<script>
+window.stateData = {"userData":{"id":0},"pagination":{"currentPage":1,"total":3,"data":[{"id":1122334,"name":"Написать Telegram-бота для записи на приём","description":"Нужен бот на aiogram.&nbsp;Запись клиентов, напоминания\r\nи выгрузка в Google Sheets.\r\n\r\nБюджет обсуждаем &amp; сроки тоже.","priceLimit":"5000","possiblePriceLimit":"15000","timeLeft":"2 дня 4 часа","kwork_count":7},{"id":1122335,"name":"Парсер каталога товаров","description":"Собрать\t\tназвания и цены с сайта поставщика, выгрузка в CSV.","priceLimit":"2000","possiblePriceLimit":"2000","timeLeft":"18 часов","kwork_count":0},{"id":1122336,"name":"Заказ без описания и без срока","description":"","priceLimit":null,"kwork_count":"12"}]},"filters":{"c":41}};
+window.somethingElse = {"ignored": true};
+</script>
+</body>
+</html>
