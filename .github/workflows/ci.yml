@@ -73,7 +73,10 @@ jobs:
           cache-to: type=gha,mode=max
 
       - name: Scan image
-        uses: aquasecurity/trivy-action@0.28.0
+        # тег обязательно с префиксом v: после инцидента с цепочкой поставок
+        # проект перевёл все теги на v-форму, и старые без префикса удалены
+        # (уцелел только 0.35.0). Ссылка на несуществующий тег роняет job за 2 с
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: freelance-bot:ci
           severity: HIGH,CRITICAL
