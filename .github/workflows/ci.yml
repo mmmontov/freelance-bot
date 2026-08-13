@@ -39,6 +39,20 @@ jobs:
       - name: Tests
         run: pytest
 
+  secrets-scan:
+    # в репозитории лежит рабочий .env с BOT_TOKEN и ключом Groq. Он в
+    # .gitignore, но одна команда `git add -f` отменяет это навсегда —
+    # история публична. Ловим до merge, а не после
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # gitleaks сканирует историю, а не только последний коммит
+          fetch-depth: 0
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
   docker:
     # образ должен собираться на каждом PR, иначе поломку Dockerfile
     # обнаружишь только в момент деплоя
@@ -51,6 +65,19 @@ jobs:
           context: .
           push: false
           tags: freelance-bot:ci
+          # load: образ должен оказаться в локальном докере, иначе trivy
+          # ниже не найдёт что сканировать
+          load: true
           # слои остаются в кэше Actions: следующая сборка секунды, а не минуты
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+      - name: Scan image
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: freelance-bot:ci
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          # 0 = отчёт без блокировки. Меняй на 1, когда разберёшься с шумом
+          # базового python:3.12-slim и решишь, что готов чинить его апдейтом
+          exit-code: "0"

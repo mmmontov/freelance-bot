@@ -66,12 +66,16 @@ jobs:
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_KEY }}
           port: ${{ secrets.SSH_PORT || 22 }}
-          # без этого упавшая команда в середине скрипта не покраснит job
-          script_stop: true
           envs: IMAGE_TAG
           script: |
+            # set -e вместо удалённого в v1.0.0 input'а script_stop: без него
+            # код возврата скрипта — это код последней команды, и упавшая
+            # проверка контейнера ниже не покраснит job
+            set -e
             cd /opt/freelance_bot
             cp -f data/bot.db "data/backup-$(date +%F-%H%M).db" || true
+            # держим пять последних бэкапов, иначе data/ растёт на 1.6 МБ за деплой
+            ls -t data/backup-*.db 2>/dev/null | tail -n +6 | xargs -r rm --
             docker compose pull
             docker compose up -d
             sleep 10
