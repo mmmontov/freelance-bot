@@ -1,6 +1,10 @@
 services:
   freelance-bot:
+    # IMAGE_TAG подставляет деплой; без переменной берётся latest
+    image: ghcr.io/mmmontov/freelance-bot:${IMAGE_TAG:-latest}
+    # build оставляем: локально `docker compose up -d --build` работает как раньше
     build: .
+    pull_policy: always
     container_name: freelance-bot
     restart: unless-stopped
     env_file: .env
