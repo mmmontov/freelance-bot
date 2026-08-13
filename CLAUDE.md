@@ -36,13 +36,26 @@ Shared fixtures in `tests/conftest.py`: in-memory SQLite `conn` plus one fixture
 
 The kwork fixture is a trimmed synthetic snapshot of the projects page. Note the caveat in its header comment: never write the state-variable name followed by `=` in that file's comments, or `STATE_RE` matches the comment instead of the data.
 
-Local `venv` is Python 3.10 while the Docker image is 3.12 — CI should pin 3.12 to match production.
+Local `venv` is Python 3.10 while the Docker image is 3.12 — CI (`.github/workflows/ci.yml`) runs the suite on both so the two don't drift; drop the `"3.10"` matrix entry once the venv is upgraded.
 
-Deployment is Docker-based, not the systemd unit in the repo root (`freelance-bot.service` is legacy/unused):
-```bash
-docker compose up -d --build   # rebuild + restart after any code change
-docker logs freelance-bot --tail 50
-```
+## CI/CD
+
+`.github/workflows/ci.yml` runs on every PR and on push to `main`: ruff + pytest (matrix 3.10/3.12), a gitleaks history scan, and a `docker build` that is then scanned by trivy (report-only, `exit-code: 0`). No secrets are needed — the network ban in `tests/conftest.py` is what makes a green run possible without `BOT_TOKEN`/`GROQ_API_KEY`. Never add a live parser call (`python -m exchanges.kwork.provider`) to CI: kwork's anti-bot will 403 the shared runner IPs.
+
+`.github/workflows/deploy.yml` runs on push to `main` (and manually via **Run workflow**): it builds the image, pushes it to `ghcr.io/mmmontov/freelance-bot` tagged `latest` + `sha-<commit>`, then SSHes to the server and runs `docker compose pull && up -d`. `docker-compose.yml` pins `image: ghcr.io/mmmontov/freelance-bot:${IMAGE_TAG:-latest}`, so the server never builds — it only pulls what CI already tested. The `build: .` key is kept so local `docker compose up -d --build` still works.
+
+Details that are load-bearing in `deploy.yml`, don't "clean them up":
+- `set -e` as the first line of the SSH script — `appleboy/ssh-action` dropped `script_stop` in v1.0.0, and without it the script's exit code is just the last command's, so a failed health check would still report a green deploy.
+- `priority=300` on the `type=sha` tag rule — `metadata-action` picks the highest-priority tag for `outputs.version` (`raw` defaults to 200, `sha` to 100), and that output is what pins the deploy to a commit.
+- `envs: IMAGE_TAG` — the action does not forward env vars to the remote shell on its own; without it a rollback silently deploys `latest`.
+- `concurrency: deploy-production` with `cancel-in-progress: false` — the bot uses long polling, so two live containers on one token get `Conflict: terminated by other getUpdates`. Deploys queue, they never overlap or get cancelled mid-script.
+
+Rollback is **Actions → Deploy → Run workflow** with a previous `sha-…` tag in the input — no rebuild involved. Each deploy also copies `data/bot.db` to `data/backup-<date>.db` and keeps the five most recent.
+
+Manual deploy is still possible on the server (`docker compose up -d --build`), but it bypasses the tests and leaves the running image untagged — use it only when Actions is unavailable. `docker logs freelance-bot --tail 50` for logs.
+
+## Runtime config
+
 The container mounts `./data:/app/data` and runs with `DB_PATH=data/bot.db` (`.env` sets `DB_PATH=bot.db` for local/non-Docker runs — these are two different SQLite files, don't confuse them when debugging state). There's a stale `bot.db` in the repo root from before Docker was introduced; the live database is `data/bot.db`.
 
 `.env` keys: `BOT_TOKEN`, `POLL_INTERVAL` (seconds between exchange polls, default 300 — kept high with jitter to avoid tripping kwork's anti-bot rate limiting), `DB_PATH`, `SEED_CHAT_ID` (optional chat auto-registered on startup), `GROQ_API_KEY` (optional — free Groq API key for the draft-response feature; if unset, the draft button just replies that it's not configured instead of failing).
