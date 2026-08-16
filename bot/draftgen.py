@@ -4,7 +4,7 @@ from groq import AsyncGroq
 
 from exchanges.base import Order
 
-MODEL = "llama-3.3-70b-versatile"
+MODEL = "qwen/qwen3.6-27b"
 SYSTEM_PROMPT = (
     "Ты помогаешь фрилансеру написать короткий черновик отклика на заказ "
     "с биржи Kwork. По-русски, по делу, без воды и лести, без приветствий "
@@ -48,7 +48,8 @@ async def generate_draft(client: AsyncGroq, order: Order) -> str:
 
     resp = await client.chat.completions.create(
         model=MODEL,
-        max_tokens=150,
+        max_completion_tokens=150,
+        reasoning_effort="none",
         messages=[
             {"role": "system", "content": system},
             {"role": "user", "content": f"Заголовок: {order.title}\n\nОписание: {order.description}"},
