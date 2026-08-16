@@ -97,7 +97,7 @@ class TestGenerateDraft:
         """Лимит токенов — вторая линия обороны по длине, помимо инструкции,
         и заодно экономия бесплатной квоты Groq."""
         await generate_draft(client, make_order("1"))
-        assert client.last["max_tokens"] == 150
+        assert client.last["max_completion_tokens"] == 150
 
     async def test_message_roles(self, client, make_order, no_style_profile):
         await generate_draft(client, make_order("1"))
